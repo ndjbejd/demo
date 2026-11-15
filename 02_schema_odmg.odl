@@ -1,0 +1,141 @@
+// =====================================================================
+// Đồ án 12: CSDL ngân hàng câu hỏi & thi trực tuyến có quản lý phiên bản
+// Học phần: Cơ sở dữ liệu nâng cao - Trường Đại học Sài Gòn (SGU)
+// Nhóm 27: Nguyễn Mạnh Dũng (3123410050) - Khưu Minh Đức (3123410083)
+// File 02: Đặc tả lược đồ CSDL Hướng đối tượng theo chuẩn ODMG 3.0 (ODL)
+// Phục vụ: Mục 6.4 & Mục 6.5 trong Báo cáo Đồ án
+// =====================================================================
+
+module OnlineExamSystem {
+
+    // -----------------------------------------------------------------
+    // 1. CÁC KIỂU ENUM DỮ LIỆU ĐẶC TẢ
+    // -----------------------------------------------------------------
+    enum Difficulty { DE, TRUNG_BINH, KHO };
+    enum VersionStatus { BAN_NHAP, DA_CONG_BO };
+    enum AttemptStatus { DANG_LAM, DA_NOP, CHO_CHAM, HOAN_TAT };
+    enum ResultStatus  { CHINH_THUC, DA_HUY };
+
+    // -----------------------------------------------------------------
+    // 2. INTERFACE OPTION (PHƯƠNG ÁN TRẮC NGHIỆM)
+    // -----------------------------------------------------------------
+    interface Option {
+        attribute long     option_id;
+        attribute string   content;
+        attribute short    order_num;
+        attribute boolean  is_correct;
+    };
+
+    // -----------------------------------------------------------------
+    // 3. INTERFACE QUESTION VERSION (LỚP TRỪU TƯỢNG PHIÊN BẢN CÂU HỎI)
+    // -----------------------------------------------------------------
+    interface QuestionVersion {
+        attribute long          version_id;
+        attribute short         version_number;
+        attribute string        content;
+        attribute Difficulty    difficulty;
+        attribute VersionStatus status;
+        attribute timestamp     created_at;
+        
+        relationship Question question_root
+            inverse Question::has_versions;
+
+        // Phương thức trừu tượng chấm điểm đa hình (Polymorphism)
+        float grade(in Answer student_answer, in float max_score);
+    };
+
+    // -----------------------------------------------------------------
+    // 4. CÁC LỚP CON KẾ THỪA CHUYÊN BIỆT HÓA (INHERITANCE: ISA TOTAL & DISJOINT)
+    // -----------------------------------------------------------------
+    // Lớp con 1: Câu hỏi trắc nghiệm một đáp án đúng
+    interface SingleChoiceQuestionVersion : QuestionVersion {
+        attribute set<Option> options;
+    };
+
+    // Lớp con 2: Câu hỏi trắc nghiệm nhiều đáp án đúng (Quy tắc toàn phần)
+    interface MultipleChoiceQuestionVersion : QuestionVersion {
+        attribute set<Option> options;
+    };
+
+    // Lớp con 3: Câu hỏi tự luận (Chấm thủ công)
+    interface EssayQuestionVersion : QuestionVersion {
+        attribute string grading_guide;
+    };
+
+    // -----------------------------------------------------------------
+    // 5. INTERFACE QUESTION (CÂU HỎI GỐC - ĐỊNH DANH LOGIC LÂU DÀI)
+    // -----------------------------------------------------------------
+    interface Question {
+        attribute long      question_id;
+        attribute string    topic_name;
+        attribute string    question_type;
+        attribute timestamp created_at;
+        
+        relationship list<QuestionVersion> has_versions
+            inverse QuestionVersion::question_root;
+    };
+
+    // -----------------------------------------------------------------
+    // 6. CẤU TRÚC ĐỀ THI & PHIÊN BẢN ĐỀ THI
+    // -----------------------------------------------------------------
+    interface ExamItem {
+        attribute long   item_id;
+        attribute short  question_order;
+        attribute float  max_score;
+
+        // Tham chiếu cố định đến phiên bản câu hỏi bất biến tại thời điểm tạo đề
+        relationship QuestionVersion used_question_version;
+    };
+
+    interface ExamVersion {
+        attribute long            exam_version_id;
+        attribute short           version_number;
+        attribute short           duration_minutes;
+        attribute short           max_attempts;
+        attribute list<ExamItem>  items;
+    };
+
+    interface Exam {
+        attribute long                exam_id;
+        attribute string              title;
+        attribute string              subject_name;
+        attribute list<ExamVersion>   versions;
+    };
+
+    // -----------------------------------------------------------------
+    // 7. LƯỢT THI, BÀI LÀM VÀ KẾT QUẢ CHẤM ĐIỂM
+    // -----------------------------------------------------------------
+    interface Answer {
+        attribute long        answer_id;
+        attribute string      essay_content;
+        attribute set<long>   selected_option_ids;
+        attribute short       update_count;
+        attribute timestamp   last_updated;
+
+        relationship ExamItem exam_item;
+    };
+
+    interface ExamAttempt {
+        attribute long          attempt_id;
+        attribute string        student_id;
+        attribute string        student_name;
+        attribute short         attempt_number;
+        attribute timestamp     start_time;
+        attribute timestamp     deadline;
+        attribute timestamp     submit_time;
+        attribute AttemptStatus status;
+
+        relationship ExamVersion   exam_version;
+        relationship set<Answer>   answers;
+        relationship ExamResult    final_result;
+    };
+
+    interface ExamResult {
+        attribute long         result_id;
+        attribute float        total_score;
+        attribute timestamp    completed_at;
+        attribute ResultStatus status;
+        
+        relationship ExamAttempt attempt;
+    };
+};
