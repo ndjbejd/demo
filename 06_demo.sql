@@ -91,6 +91,8 @@ ORDER BY chtd.thu_tu_cau_hoi ASC;
 -- 5.1. Kiểm thử điều kiện ngăn chuyển trạng thái khi nộp bài lặp (Khớp Hình 7.9 trang 126):
 -- Thử cập nhật lượt thi 1 đã HOAN_TAT với điều kiện trang_thai = 'DANG_LAM'
 -- Kết quả trả về: UPDATE 0 (không bản ghi nào bị cập nhật lặp)
+ROLLBACK;
+
 UPDATE luot_thi
 SET trang_thai = 'DA_NOP',
     thoi_gian_nop = now()
